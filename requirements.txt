@@ -1,0 +1,6 @@
+paho-mqtt>=2.1.0,
+crc>=7.1.0,
+cryptography>=45.0.3,
+pymodbus>=3.8.6,
+warrant>=0.6.1,
+requests>=2.32.3

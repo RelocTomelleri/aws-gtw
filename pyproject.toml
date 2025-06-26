@@ -1,0 +1,21 @@
+[project]
+name = "client_cloud"
+version = "0.0.1"
+description = "Implementazione funzionalità di base per gateway"
+authors = [
+    { name="Tomelleri Michael", email="michael.tomelleri@reloc.it" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+dependencies = [
+    "paho-mqtt>=2.1.0",
+    "crc>=7.1.0",
+    "cryptography>=45.0.3",
+    "pymodbus>=3.8.6",
+    "warrant>=0.6.1",
+    "requests>=2.32.3"
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
