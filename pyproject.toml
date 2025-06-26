@@ -8,12 +8,13 @@ authors = [
 readme = "README.md"
 license = { file = "LICENSE" }
 dependencies = [
-    "paho-mqtt>=2.1.0",
-    "crc>=7.1.0",
-    "cryptography>=45.0.3",
-    "pymodbus>=3.8.6",
-    "warrant>=0.6.1",
-    "requests>=2.32.3"
+    "paho-mqtt==2.1.0",
+    "crc==7.1.0",
+    "cryptography==45.0.3",
+    "pymodbus==3.8.6",
+    "warrant==0.6.1",
+    "requests==2.32.3",
+    "pycryptodome==3.20.0"
 ]
 
 [build-system]

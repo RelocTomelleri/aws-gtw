@@ -1,7 +1,7 @@
 import os
 import base64
 
-from parse_credentials_bin import parse_bin_file, save_as_json
+from client_cloud.utils.parse_credentials_bin import parse_bin_file, save_as_json
 
 def decode_and_save_credentials(binary_data, gateway_id, certs_path):
     gateway_data_path = f'{certs_path}'

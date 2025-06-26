@@ -7,15 +7,15 @@ import string
 import time
 import json
 
-from login.aws_login import cognito_login
-from config import aws_config
-from api import aws_api
-from utils import decode_and_save_credentials
+from client_cloud.login.aws_login import cognito_login
+from client_cloud.config import aws_config
+from client_cloud.api import aws_api
+from client_cloud.utils import decode_and_save_credentials
 
-from utils.modbus_utils import ModbusSerial
+from client_cloud.utils.modbus_utils import ModbusSerial
 
-from utils.gtw_provisioning import provision_gateway
-from utils.mqtt_utils import (
+from client_cloud.utils.gtw_provisioning import provision_gateway
+from client_cloud.utils.mqtt_utils import (
     build_topics,
     check_required_files,
     load_credentials,
@@ -29,43 +29,55 @@ from utils.mqtt_utils import (
 
 class GatewayEmulator:
     def __init__(self, config_local):
+        # 🔧 CONFIGURAZIONE BASE
         self.config = config_local
         self.gateway_id = config_local.gateway_config['gateway_id']
         self.provvisioning_code = config_local.gateway_config['provvisioning_code']
         self.certs_path = f"{os.path.abspath(config_local.path_config['certs_path'])}/gateways/{self.gateway_id}"
-
-        self.serial = ModbusSerial(
-            port        = config_local.modbus['v_port'],
-            baudrate    = config_local.modbus['baudrate'],
-            parity      = config_local.modbus['parity'],
-            stopbits    = config_local.modbus['stopbits'],
-            bytesize    = config_local.modbus['bytesize'],
-            timeout     = config_local.modbus['timeout']
-        )
-        self.serial.connect()
-
         self.credentials_path = f"{self.certs_path}/{self.gateway_id}_credentials.json"
+
+        # 📡 COMUNICAZIONE MODBUS (commentata per ora)
+        # self.serial = ModbusSerial(
+        #     port        = config_local.modbus['v_port'],
+        #     baudrate    = config_local.modbus['baudrate'],
+        #     parity      = config_local.modbus['parity'],
+        #     stopbits    = config_local.modbus['stopbits'],
+        #     bytesize    = config_local.modbus['bytesize'],
+        #     timeout     = config_local.modbus['timeout']
+        # )
+        # self.serial.connect()
+
+        # ☁️ CONFIGURAZIONE MQTT E AWS
         self.client = None
         self.endpoint = None
         self.port = aws_config.aws['port']
         self.env = aws_config.aws['env']
         self.client_id = self.gateway_id
+        self.topics = build_topics(self.gateway_id, self.env)
 
-        self.connection_status = False
+    # == STATO GATEWAY ==
+        # 📶 Stato della connessione e dell'applicazione
+        self.connection_status = "offline"
         self.app_state = "N/A"
+
+        # 📦 Versioni firmware e hardware
         self.versions = {
-            "fw_app": "1.0.3",
-            "fw_wifi": "1.0.3",
-            "hw": "1.0"
+            "fw_app": "N/A",
+            "fw_wifi": "N/A",
+            "hw": "N/A"
         }
+
+        # 📍 Posizione GPS / localizzazione
         self.location = {
             "latitude": 0,
             "longitude": 0,
             "status": 0
         }
 
-        self.topics = build_topics(self.gateway_id, self.env)
+        # 🧩 Dispositivi collegati
+        self.devices = {}
 
+        # 🔄 Dati trasmissioni Pass-Through
         self.pt_enabled = False
         self.pt_id = ""
         self.sid = ""
@@ -84,7 +96,8 @@ class GatewayEmulator:
         check_required_files(self.certs_path, self.gateway_id)
         self.endpoint, self.port, self.client_id = load_credentials(self.credentials_path, self.gateway_id)
         self.client = setup_mqtt_client(self.client_id, self.certs_path, self.gateway_id, self.topics, self)
-        self.app_state = "run"
+        self.app_state = "init"
+        self.connection_status = "online"
         wait_for_connection(self.client, self.endpoint, self.port, self.topics["pub"]["lwt_topic"], self, start_loop)
 
     def publish(self, topic, payload, qos=1):
@@ -135,29 +148,52 @@ class GatewayEmulator:
 
 # === Shadow ===
 
-    def publish_shadow_state(self):
+    def publish_shadow_state(self, identity=True, devices=False):
         """
         Pubblica lo stato corrente (shadow) del gateway sul topic MQTT
+        nel formato AWS IoT Shadow con metadata e timestamp per ogni campo.
         """
 
         if not self.client:
             raise RuntimeError("❌ Client MQTT non connesso.")
         
-        shadow_payload = {
+        # Timestamp corrente (esempio: UNIX time)
+        now_ts = int(time.time())
+
+        # Funzione helper ricorsiva per costruire metadata con timestamp
+        def build_metadata(obj):
+            if isinstance(obj, dict):
+                return {k: build_metadata(v) for k, v in obj.items()}
+            else:
+                return {"timestamp": now_ts}
+
+        reported_state = {
             "gatewayId": self.gateway_id,
-            "connectionStatus": self.connection_status,
-            "connectionType": getattr(self.config.gateway_config, "connection_type", "ethernet"),
-            "serialConnectionType": getattr(self.config.gateway_config, "serial_conn_type", "RS485"),
             "stage": self.env,
-            "appState": self.app_state,
-            "logState": getattr(self.config.gateway_config, "log_state", "disabled"),
             "versions": self.versions,
             "model": getattr(self.config.gateway_config, "model", "full"),
+            "connectionType": getattr(self.config.gateway_config, "connection_type", ""),
+            "serialConnectionType": getattr(self.config.gateway_config, "serial_conn_type", "RS485"),
+            "connectionStatus": "online" if self.connection_status else "offline",
+            "appState": self.app_state,
+            "logState": getattr(self.config.gateway_config, "log_state", "disabled"),
             "location": self.location,
-            "identityUpdate": True,
-            "devicesUpdate": False
+            "devices": self.devices,
+            "identityUpdate": identity,
+            "devicesUpdate": devices
+        }
+
+        shadow_payload = {
+            "state": {
+                "reported": reported_state
+            },
+            "metadata": {
+                "reported": build_metadata(reported_state)
+            },
+            "version": 1,  # Se hai una versione dinamica, la metti qui
+            "timestamp": now_ts
         }
 
         topic = self.topics["pub"]["shadow_topic"]
-        self.publish(topic, json.dumps(shadow_payload))
-        print(f"🛰️ Shadow state pubblicato su MQTT: {shadow_payload}")
+        self.publish(topic, shadow_payload)
+        #print(f"🛰️ Shadow state pubblicato su MQTT: {json.dumps(shadow_payload, indent=2)}")

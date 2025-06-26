@@ -1,10 +1,10 @@
 import hashlib
 import base64
 
-from ..login.aws_login import cognito_login
-from ..config import aws_config as config
-from ..api import aws_api
-from ..utils import decode_and_save_credentials
+from client_cloud.login.aws_login import cognito_login
+from client_cloud.config import aws_config as config
+from client_cloud.api import aws_api
+from client_cloud.utils import decode_and_save_credentials
 
 
 def provision_gateway(gateway_id, certs_path):

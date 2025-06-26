@@ -5,7 +5,7 @@ import time
 import ssl
 import re
 import paho.mqtt.client as mqtt
-from ..config import aws_config as config
+from client_cloud.config import aws_config as config
 
 # === Costanti ====
 lwt_payload = {

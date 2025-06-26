@@ -5,7 +5,7 @@ import requests
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(os.path.join(BASE_DIR, 'config'))
 
-import config.aws_config as config
+from client_cloud.config.aws_config import aws
 
 def call_api_get(url, id_token):
     headers = {
@@ -71,22 +71,22 @@ def call_api_del(url, id_token):
 # Funzioni specifiche per le tue API AWS
 
 def get_gateway_info(id_token, gateway_id):
-    url = f"{config.aws['api_endpoint']}/gateways/{gateway_id}"
+    url = f"{aws['api_endpoint']}/gateways/{gateway_id}"
     return call_api_get(url, id_token)
 
 ### FE:
 # Add gateway
 def provision_gateway(id_token, payload):
-    url = f"{config.aws['api_endpoint']}/api/v0/gateways"
+    url = f"{aws['api_endpoint']}/api/v0/gateways"
     return call_api_post(url, id_token, payload)
 
 # Add gateway
 def delete_gateway(id_token, gateway_id):
-    url = f"{config.aws['api_endpoint']}/api/v0/gateways/{gateway_id}"
+    url = f"{aws['api_endpoint']}/api/v0/gateways/{gateway_id}"
     return call_api_del(url, id_token)
 
 # GTW: api
 def get_credentials(passwordRoot, gateway_id):
-    url = f"{config.aws['api_endpoint']}/api/v0/credentials/{gateway_id}"
+    url = f"{aws['api_endpoint']}/api/v0/credentials/{gateway_id}"
     print(f"Url: \t{url}\nPasswordRoot: \t{passwordRoot}")
     return call_api_get(url, passwordRoot)

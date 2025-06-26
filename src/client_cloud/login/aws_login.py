@@ -1,16 +1,15 @@
-from warrant import Cognito
+from pycognito import Cognito
+from botocore.exceptions import ClientError
 
 def cognito_login(username, password, user_pool_id, client_id, region):
+    user = Cognito(user_pool_id, client_id, username=username, user_pool_region=region)
     try:
-        u = Cognito(user_pool_id, client_id, username=username, user_pool_region=region)
-        u.authenticate(password=password)
-
+        user.authenticate(password)
         return {
-            "access_token": u.access_token,
-            "id_token": u.id_token,
-            "refresh_token": u.refresh_token
+            "access_token": user.access_token,
+            "id_token": user.id_token,
+            "refresh_token": user.refresh_token,
         }
-
-    except Exception as e:
-        print(f"❌ Errore durante il login: {e}")
+    except ClientError as e:
+        print(f"❌ Errore durante il login: {e.response['Error']['Message']}")
         return None
