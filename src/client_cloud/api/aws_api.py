@@ -7,11 +7,13 @@ sys.path.append(os.path.join(BASE_DIR, 'config'))
 
 from client_cloud.config.aws_config import aws
 
-def call_api_get(url, id_token):
+def call_api_get(url, id_token=None):
     headers = {
-        'Authorization': id_token,
         'Content-Type': 'application/json'
     }
+    if id_token:  # aggiungi header solo se fornito
+        headers['Authorization'] = id_token
+
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()
@@ -23,6 +25,7 @@ def call_api_get(url, id_token):
         else:
             # Ritorna un dizionario con metadata e contenuto raw
             return {
+                "headers": dict(response.headers),
                 "content_type": content_type,
                 "content": response.content
             }
@@ -90,3 +93,8 @@ def get_credentials(passwordRoot, gateway_id):
     url = f"{aws['api_endpoint']}/api/v0/credentials/{gateway_id}"
     print(f"Url: \t{url}\nPasswordRoot: \t{passwordRoot}")
     return call_api_get(url, passwordRoot)
+
+def get_config_bin(configId):
+    url = f"{aws['api_endpoint']}/api/v0/configurations/{configId}/bin"
+    print(f"Url: \t{url}\nConfigId: \t{configId}")
+    return call_api_get(url)

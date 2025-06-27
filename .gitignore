@@ -3584,3 +3584,4 @@ certs/gateways/123456789/123456789_credentials.bin
 certs/gateways/123456789/123456789_credentials.json
 certs/gateways/123456789/123456789_private.key
 certs/gateways/123456789/root_CA.pem
+gtw_configs/GM1_GV1_00000001.bin

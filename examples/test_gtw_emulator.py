@@ -37,6 +37,14 @@ gateway.start_listening()
 
 gateway.publish_shadow_state()
 
+# Esempio: download and save config_bin from API to config_local.path_config["config_path"]
+#           configId = "configuration_id" + "_" + "version" + "_" + "revision(8 numbers)"
+config_path = gateway.get_config_bin("GM1_GV1_00000001")
+if config_path:
+    print(f"✅ Configurazione salvata in: {config_path}")
+
+time.sleep(delay)
+
 # Esempio: modifico lo stato del gateway in INIT prima della pubblicazione sulla shadow
 print(f"\n\n⚠️ APP-STATE -> INIT ({delay}s)\n")
 state_to_set = {

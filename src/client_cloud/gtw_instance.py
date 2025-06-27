@@ -10,6 +10,7 @@ from client_cloud.login.aws_login import cognito_login
 from client_cloud.config import aws_config
 from client_cloud.api import aws_api
 from client_cloud.utils import decode_and_save_credentials
+from client_cloud.utils.save_config_bin import save_config_bin
 
 from client_cloud.utils.modbus_utils import ModbusSerial
 
@@ -115,6 +116,20 @@ class GatewayEmulator:
     def disconnect(self):
         self.app_state = "N/A"
         disconnect_client(self.client)
+
+# === Config ===   
+    def get_config_bin(self, config_id):
+        if config_id is None:
+            print(f"⚠️ ConfigId mancante!")
+            return
+
+        try:
+            response = aws_api.get_config_bin(config_id)
+                        
+            return save_config_bin(self.config.path_config["config_path"], response)
+
+        except Exception as e:
+            print(f"❌ Errore durante il recupero della config: {e}")
 
 
 # === Telemetries ===

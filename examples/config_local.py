@@ -8,7 +8,8 @@ gateway_config = dict(
 )
 
 path_config = dict(
-    certs_path  = "./certs"  # dove salvare i certificati
+    certs_path  = "./certs",  # dove salvare i certificati
+    config_path = "./gtw_configs"
 )
 
 modbus = dict(
