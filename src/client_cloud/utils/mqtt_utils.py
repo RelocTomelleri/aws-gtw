@@ -94,8 +94,17 @@ def setup_mqtt_client(client_id, certs_path, gateway_id, topics, gtw_instance):
     return client
 
 def _on_connect(client, userdata, flags, rc):
+    conn_errors = {
+        1: "Connessione rifiutata – versione del protocollo errata",
+        2: "ID client rifiutato",
+        3: "Server non disponibile",
+        4: "Nome utente/password errati",
+        5: "Non autorizzato",
+    }
+    
     if rc == 0:
         userdata.connection_status = True
+        userdata.connection_error_code = None
         print("✅ Connessione MQTT riuscita")
 
         # Subscribe topics
@@ -104,7 +113,10 @@ def _on_connect(client, userdata, flags, rc):
             client.pending_subscriptions[mid] = topic
             print(f"📩 [{mid}] Richiesta sottoscrizione a: {topic}")
     else:
-        print(f"❌ Connessione fallita, codice: {rc}")
+        userdata.connection_status = False
+        userdata.connection_error_code = rc
+        error = conn_errors.get(rc, "Errore sconosciuto")
+        print(f"❌ Connessione fallita, codice: [{rc}] - {error}")
 
 
 def _on_message(client, userdata, msg):
@@ -162,7 +174,11 @@ def _on_subscribe(client, userdata, mid, granted_qos):
 def wait_for_connection(client, endpoint, port, lwt_topic, gtw_instance, timeout=30, start_loop=True):  # Timeout: "Dopo quanto smettere di tentare la connessione"
     keepalive = int(config.mqtt["keepalive"])
 
-    # Imposto il Last Will prima della connessione
+    # Attributi iniziali
+    gtw_instance.connection_status = False
+    gtw_instance.connection_error_code = None
+
+    # Imposto LWT
     client.will_set(
         topic=lwt_topic,
         payload=json.dumps(lwt_payload),
@@ -181,15 +197,26 @@ def wait_for_connection(client, endpoint, port, lwt_topic, gtw_instance, timeout
     if start_loop:
         client.loop_start()
 
+    # Attesa connessione...
     start_time = time.time()
-    while not gtw_instance.connection_status and time.time() - start_time < timeout:
+    while time.time() - start_time < timeout:
+        if gtw_instance.connection_status and not client.pending_subscriptions:
+            print("✅ Connessione e sottoscrizioni completate")
+            return
+        if gtw_instance.connection_error_code is not None:
+            print(f"❌ Connessione fallita con codice: {gtw_instance.connection_error_code}")
+            if start_loop:
+                client.loop_stop()
+            sys.exit(1)
         time.sleep(0.1)
+    # while not gtw_instance.connection_status and time.time() - start_time < timeout:
+    #     time.sleep(0.1)
 
-    if not gtw_instance.connection_status:
-        print("❌ Timeout connessione MQTT")
-        if start_loop:
-            client.loop_stop()
-        sys.exit(1)
+    #if not gtw_instance.connection_status:
+    print("❌ Timeout connessione MQTT")
+    if start_loop:
+        client.loop_stop()
+    sys.exit(1)
 
 
 def publish_message(client, topic, payload, qos):

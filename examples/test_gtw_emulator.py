@@ -38,9 +38,9 @@ gateway.start_listening()
 gateway.publish_shadow_state()
 
 # Esempio: modifico lo stato del gateway in INIT prima della pubblicazione sulla shadow
-print(f"\n\n⚠️ APP-STATE -> INIT\n")
+print(f"\n\n⚠️ APP-STATE -> INIT ({delay}s)\n")
 state_to_set = {
-    "connection_status": "online",
+    "connection_status": True,
     "app_state": "init",
     "versions": {
             "fw_app": "1.0.3",
@@ -55,9 +55,9 @@ gateway.publish_shadow_state()
 time.sleep(delay)
 
 # Esempio: modifico lo stato del gateway in RUN prima della pubblicazione sulla shadow
-print(f"\n\n⚠️ APP-STATE -> RUN\n")
+print(f"\n\n⚠️ APP-STATE -> RUN ({delay}s)\n")
 state_to_set = {
-    "connection_status": "online",
+    "connection_status": True,
     "app_state": "run",
     "versions": {
             "fw_app": "1.0.3",
@@ -94,7 +94,7 @@ gateway.publish_shadow_state(identity=True, devices=True)
 time.sleep(delay)
 
 # Esempio: mando delle telemetrie
-print(f"\n\n⚠️ CHANGE TELEMETRIE\n")
+print(f"\n\n⚠️ SEND TELEMETRIES ({delay}s)\n")
 telemetry_metrics = [
     {
         "name":"04_201",
@@ -176,10 +176,27 @@ gateway.send_telemetries(metrics=telemetry_metrics, device_id="PIPPO", method="m
 
 time.sleep(delay)
 
+# Esempio: simple publish_shadow (Stato del gateway in OTA)
+print(f"\n\n⚠️ APP-STATE -> OTA ({delay}s)\n")
+report = {
+    "gatewayId": gateway.gateway_id,
+    "stage": gateway.env,
+    "versions": gateway.versions,
+    "identityUpdate": True,
+    "devicesUpdate": False,
+    "connectionStatus": True,
+    "appState": "OTA"   
+}
+print(f"REPORT: {report}")
+gateway.publish_shadow_simple(reported=report)
+
+time.sleep(delay)
+
 # Esempio: modifico lo stato del gateway in OFFLINE prima della pubblicazione sulla shadow
-print(f"\n\n⚠️ APP-STATE -> OFFLINE\n")
+print(f"\n\n⚠️ APP-STATE -> OFFLINE ({delay}s)\n")
 state_to_set = {
     "connection_status": "offline",
+    "app_state": "N/A"
 }
 set_gateway_state(gateway, state_to_set)
 gateway.publish_shadow_state()

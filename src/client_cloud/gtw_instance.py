@@ -2,8 +2,7 @@ import hashlib
 import base64
 import os
 import time
-import random
-import string
+import threading
 import time
 import json
 
@@ -31,6 +30,7 @@ class GatewayEmulator:
     def __init__(self, config_local):
         # 🔧 CONFIGURAZIONE BASE
         self.config = config_local
+        self.connected = threading.Event()
         self.gateway_id = config_local.gateway_config['gateway_id']
         self.provvisioning_code = config_local.gateway_config['provvisioning_code']
         self.certs_path = f"{os.path.abspath(config_local.path_config['certs_path'])}/gateways/{self.gateway_id}"
@@ -57,7 +57,8 @@ class GatewayEmulator:
 
     # == STATO GATEWAY ==
         # 📶 Stato della connessione e dell'applicazione
-        self.connection_status = "offline"
+        self.connection_status = False
+        self.connection_error_code = None
         self.app_state = "N/A"
 
         # 📦 Versioni firmware e hardware
@@ -97,10 +98,12 @@ class GatewayEmulator:
         self.endpoint, self.port, self.client_id = load_credentials(self.credentials_path, self.gateway_id)
         self.client = setup_mqtt_client(self.client_id, self.certs_path, self.gateway_id, self.topics, self)
         self.app_state = "init"
-        self.connection_status = "online"
         wait_for_connection(self.client, self.endpoint, self.port, self.topics["pub"]["lwt_topic"], self, start_loop)
 
     def publish(self, topic, payload, qos=1):
+        if not self.connection_status:
+            print("⚠️ Impossibile pubblicare: MQTT non connesso.")
+            return
         publish_message(self.client, topic, payload, qos)
 
     def start_listening(self):
@@ -197,3 +200,37 @@ class GatewayEmulator:
         topic = self.topics["pub"]["shadow_topic"]
         self.publish(topic, shadow_payload)
         #print(f"🛰️ Shadow state pubblicato su MQTT: {json.dumps(shadow_payload, indent=2)}")
+
+
+    def publish_shadow_simple(self, reported: dict):
+        """
+        Pubblica uno stato arbitrario come shadow AWS IoT.
+        
+        Parametri:
+        - reported: dict contenente lo stato da pubblicare.
+        - version: int opzionale, default 1. Usato per il campo 'version'.
+        """
+
+        if not self.client:
+            raise RuntimeError("❌ Client MQTT non connesso.")
+
+        now_ts = int(time.time())
+
+        def build_metadata(obj):
+            if isinstance(obj, dict):
+                return {k: build_metadata(v) for k, v in obj.items()}
+            return {"timestamp": now_ts}
+
+        shadow_payload = {
+            "state": {
+                "reported": reported
+            },
+            "metadata": {
+                "reported": build_metadata(reported)
+            },
+            "version": 2,
+            "timestamp": now_ts
+        }
+
+        topic = self.topics["pub"]["shadow_topic"]
+        self.publish(topic, shadow_payload)
