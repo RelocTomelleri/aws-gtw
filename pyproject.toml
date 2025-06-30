@@ -1,6 +1,6 @@
 [project]
 name = "client_cloud"
-version = "0.0.1"
+version = "0.0.2"
 description = "Implementazione funzionalità di base per gateway"
 authors = [
     { name="Tomelleri Michael", email="michael.tomelleri@reloc.it" }

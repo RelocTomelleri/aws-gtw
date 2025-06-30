@@ -16,11 +16,6 @@ user = dict(
     psw     =   'Reloc@123'
 )
 
-gtw = dict(
-    gateway_id          =   '123456789',
-    provvisioning_code  =   '987654321'
-)
-
 """
     Note: Quando si aggiunge un topic, andarlo ad inserire all'interno di mqtt_utils -> build_topics()
 """
